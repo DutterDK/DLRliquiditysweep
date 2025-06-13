@@ -1,6 +1,6 @@
 from typing import Dict, Any
 from stable_baselines3.common.callbacks import BaseCallback
-import numpy as np
+import numpy as np, os, torch
 
 
 class TradingMetricsCallback(BaseCallback):
@@ -56,4 +56,35 @@ class TradingMetricsCallback(BaseCallback):
                 self.logger.record("market/volume", current_data.get("volume", 0.0))
                 self.logger.record("market/mid_price", current_data.get("mid", 0.0))
 
+        return True
+
+
+class ActionHistogram(BaseCallback):
+    def __init__(self, freq=10_000):
+        super().__init__()
+        self.freq = freq
+        self.hist = np.zeros(3, dtype=int)
+
+    def _on_step(self):
+        actions = self.locals["actions"]
+        for a in actions:
+            self.hist[a] += 1
+        if self.num_timesteps % self.freq == 0:
+            print(f"[{self.num_timesteps:,}] action hist {self.hist}")
+            self.hist[:] = 0
+        return True
+
+
+class CheckpointEveryStep(BaseCallback):
+    def __init__(self, save_freq, save_path="models"):
+        super().__init__()
+        self.save_freq, self.save_path = save_freq, save_path
+        os.makedirs(save_path, exist_ok=True)
+
+    def _on_step(self):
+        if self.num_timesteps % self.save_freq == 0:
+            fname = f"{self.save_path}/ppo_{self.num_timesteps}.zip"
+            self.model.save(fname)
+            torch.save(self.training_env.get_attr("equity"), f"{fname}.equity.pt")
+            print("   ✔ checkpoint", fname)
         return True
