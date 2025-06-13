@@ -39,4 +39,16 @@ desktop.ini
 # Project specific
 .cache/
 logs/
-*.log 
+*.log
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Data files
+data/eurusd_1s/EURUSD_ALL.parquet
+*.parquet
+*.csv
+
+# Model files
+models/
+*.zip 
