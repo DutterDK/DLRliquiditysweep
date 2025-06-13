@@ -18,14 +18,19 @@ def test_bar_size():
     assert len(df1) == pytest.approx(5 * len(df5), rel=0.1)
 
 
-def test_bar_size_resample(tmp_path: Path):
+def test_bar_size_resample(tmp_path):
     csv = tmp_path / "ticks.csv"
-    # generate 10 ticks at 0.2-second spacing
+
     rows = [
-        f"2025-01-01 00:00:00.{i:03d},1.0000,1.0002,1" for i in range(0, 2000, 200)
+        # three DISTINCT seconds so resampling can create 3×1-s bars
+        "2025-01-01 00:00:00.000,1.0000,1.0002,1",
+        "2025-01-01 00:00:01.000,1.0001,1.0003,1",
+        "2025-01-01 00:00:02.000,1.0002,1.0004,1",
     ]
     csv.write_text("time,bid,ask,volume\n" + "\n".join(rows))
+
     df_1s = load_tick_csv(csv, to_seconds=1)
     df_5s = load_tick_csv(csv, to_seconds=5)
-    assert len(df_1s) == 10  # 10 ticks → 10 bars at 1s
-    assert len(df_5s) == 1  # all ticks in one 5s bar
+
+    assert len(df_1s) == 3         # 3 seconds → 3 bars
+    assert len(df_5s) == 1         # 5-second resample collapses to 1 bar
