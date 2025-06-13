@@ -47,6 +47,7 @@ class LiquiditySweepEnv(gym.Env):
         self.equity_prev = 0.0  # Track previous equity for penalty
         self.equity_history = [0.0]
         self.current_date = None
+        self.max_equity = 0.0  # Track max equity
         self.action_space = gym.spaces.Discrete(3)
         self.observation_space = gym.spaces.Box(
             low=-np.inf, high=np.inf, shape=(12,), dtype=np.float32
@@ -71,6 +72,7 @@ class LiquiditySweepEnv(gym.Env):
         self.equity = 0.0
         self.equity_prev = 0.0  # Track previous equity for penalty
         self.equity_history = [0.0]
+        self.max_equity = 0.0  # Reset max equity
         idx = self.data.index
         if isinstance(idx, pd.DatetimeIndex):
             self.current_date = idx[0].date()
@@ -123,79 +125,70 @@ class LiquiditySweepEnv(gym.Env):
         return np.array(obs, dtype=np.float32)
 
     def step(self, action):
-        """Execute one step in the environment.
-
-        Args:
-            action: 0=hold, 1=buy, 2=sell
-
-        Returns:
-            observation: Current state observation
-            reward: Reward for the step
-            terminated: Whether episode is done
-            truncated: Whether episode was truncated
-            info: Additional information
-        """
-        if action not in [0, 1, 2]:
-            raise AssertionError("invalid action")
-        terminated = False
-        truncated = False
-        reward = 0.0
+        """Execute one time step within the environment."""
+        # Initialize debug actions list if not exists
+        self.debug_actions = getattr(self, "debug_actions", [])
+        
+        # Get current prices
+        current_bid = self.data.iloc[self.current_step]["bid"]
+        current_ask = self.data.iloc[self.current_step]["ask"]
+        current_mid = (current_bid + current_ask) / 2
+        
+        # Calculate reward based on action
+        reward = 0
+        done = False
         info = {}
-        if self.current_step >= len(self.data):
-            obs = self._get_obs() if len(self.data) > 0 else np.zeros(self.observation_space.shape, dtype=np.float32)
-            return obs, reward, True, truncated, info
-        row = self.data.iloc[self.current_step]
-        realised = 0.0
-        closing_position = False
-        # --- Trading logic ---
-        if action == 1:  # Buy
-            if self.position == 0:
+        
+        # Handle position changes
+        if action != self.position:  # Position change
+            if self.position == 1:  # Close long
+                pnl = (current_bid - self.entry_price) - self.commission
+                reward = pnl
+                self.equity += pnl
+            elif self.position == -1:  # Close short
+                pnl = (self.entry_price - current_ask) - self.commission
+                reward = pnl
+                self.equity += pnl
+                
+            # Apply drawdown penalty only if max_equity > 0
+            if self.max_equity > 0 and self.equity < self.max_equity:
+                drawdown = (self.max_equity - self.equity) / self.max_equity
+                reward -= self.lambda_dd * drawdown
+            
+            # Update position
+            if action == 1:  # Enter long
                 self.position = 1
-                self.entry_price = row["ask"]
-            elif self.position == -1:
-                # Close short position
-                realised = self.entry_price - row["ask"]
-                closing_position = True
-                self.position = 0
-                self.entry_price = 0.0
-        elif action == 2:  # Sell
-            if self.position == 0:
+                self.entry_price = current_ask
+            elif action == 2:  # Enter short
                 self.position = -1
-                self.entry_price = row["bid"]
-            elif self.position == 1:
-                # Close long position
-                realised = row["bid"] - self.entry_price
-                closing_position = True
+                self.entry_price = current_bid
+            else:  # Hold
                 self.position = 0
-                self.entry_price = 0.0
-
-        reward = realised
-        if closing_position:
-            reward -= self.commission
-
-        # Drawdown penalty BEFORE equity update
-        dd_pen = drawdown_penalty(
-            pd.Series([self.equity, self.equity + reward]),
-            lam=self.lambda_dd
-        )
-        reward += dd_pen
-
-        self.equity += reward
-        self.equity_history.append(self.equity)
-        self.equity_prev = self.equity
+                self.entry_price = 0
+                
+            # Update max equity
+            self.max_equity = max(self.max_equity, self.equity)
+        
+        # Move to next step
         self.current_step += 1
-        if self.reset_on_day_change and self.current_step < len(self.data):
-            next_date = self.data.index[self.current_step]
-            if isinstance(next_date, pd.Timestamp):
-                next_date = next_date.date()
-            if next_date != self.current_date:
-                terminated = True
-                self.current_date = next_date
-        if self.current_step >= len(self.data):
-            terminated = True
-            obs = self._get_obs() if len(self.data) > 0 else np.zeros(self.observation_space.shape, dtype=np.float32)
-            return obs, reward, terminated, truncated, info
+        
+        # Check if episode is done
+        if self.current_step >= len(self.data) - 1:
+            done = True
+            info["final_equity"] = self.equity
+            info["max_drawdown"] = (self.max_equity - self.equity) / self.max_equity if self.max_equity > 0 else 0
+        elif self.reset_on_day_change:
+            current_day = self.data.index[self.current_step].date()
+            if current_day != self.data.index[self.current_step - 1].date():
+                done = True
+                info["day_change"] = True
+        
+        # Store debug action
+        self.debug_actions.append(action)
+        
         obs = self._get_obs()
+        terminated = done
+        truncated = False
         return obs, reward, terminated, truncated, info
 
     def render(self):

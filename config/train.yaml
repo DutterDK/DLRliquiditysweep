@@ -1,23 +1,20 @@
+data:
+  file_path: "data/eurusd_ticks.csv"
+  bar_size: 1  # 1 second bars
+
 env:
+  commission: 0.0  # Set to 0 for testing
+  lambda_dd: 0.0  # Set to 0 for testing
+  max_position: 1
+  max_drawdown: 0.1
+  reward_scale: 1.0
+  reset_on_day_change: true
   data_file: data/eurusd_1s/EURUSD_ALL.parquet
   bar_seconds: 1
   train_start: "2024-05-01"
   train_end:   "2025-01-31"
   test_start:  "2025-02-01"
   test_end:    "2025-05-01"
-  lambda_dd:   0.001
-  commission:  0.00007
-
-ppo:
-  total_timesteps: 5000000
-  n_steps: 1024
-  batch_size: 1024
-  learning_rate: 1.0e-4
-  n_epochs: 10
-  gamma: 0.99
-  gae_lambda: 0.95
-  clip_range: 0.2
-  clip_range_vf: null
   normalize_advantage: true
   ent_coef: 0.01
   vf_coef: 0.5
@@ -25,9 +22,21 @@ ppo:
   use_sde: false
   sde_sample_freq: -1
   target_kl: null
-  tensorboard_log: "logs/tensorboard"
   policy_kwargs:
     net_arch:
       pi: [64, 64]
       vf: [64, 64]
-    activation_fn: "tanh" 
+    activation_fn: "tanh"
+
+train:
+  learning_rate: 0.0003
+  n_steps: 2048
+  batch_size: 64
+  n_epochs: 10
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_range: 0.2
+  total_timesteps: 50000  # Reduced for testing
+  model_dir: "./models"
+  model_name: "ppo_liquidity_sweep"
+  tensorboard_log: "./logs" 
