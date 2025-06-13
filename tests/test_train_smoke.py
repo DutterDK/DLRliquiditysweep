@@ -1,4 +1,4 @@
-from drl_liquidity_sweep.scripts.train import main
+from drl_liquidity_sweep.scripts.train import train
 
 
 def test_training_smoke(tmp_path, monkeypatch):
@@ -14,4 +14,4 @@ def test_training_smoke(tmp_path, monkeypatch):
         "  gamma: 0.99\n  clip_range: 0.2\n  n_epochs: 10\n  gae_lambda: 0.95\n"
         "misc:\n  seed: 0\n  log_dir: ./logs\n  total_timesteps: 64\n"
     )
-    main(conf)  # should run without raising
+    train(conf, {"ppo.total_timesteps": 1000})  # should run without raising

@@ -17,11 +17,24 @@ class PrintStats(BaseCallback):
         return True
 
 
-def train(config_path: str):
+def update_nested_dict(d, key, value):
+    """Update a nested dictionary using dot notation."""
+    keys = key.split('.')
+    for k in keys[:-1]:
+        d = d.setdefault(k, {})
+    d[keys[-1]] = value
+
+
+def train(config_path: str, overrides=None):
     """Train the agent using the specified configuration."""
     # Load configuration
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
+    
+    # Apply overrides
+    if overrides:
+        for key, value in overrides.items():
+            update_nested_dict(config, key, value)
     
     # Load and prepare data
     data = load_tick_csv(
@@ -61,11 +74,12 @@ def train(config_path: str):
     )
     
     # Create callbacks
+    save_every_steps = config["misc"].get("save_every_steps", 50000)
     callbacks = [
         TradingMetricsCallback(),
         PrintStats(),
         ActionHistogram(freq=50_000),
-        CheckpointEveryStep(save_freq=config["misc"]["save_every_steps"]),
+        CheckpointEveryStep(save_freq=save_every_steps),
     ]
     
     # Train model
@@ -87,5 +101,25 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=str, required=True, help="Path to config file")
+    parser.add_argument("--overrides", nargs="+", help="Config overrides in format key=value")
     args = parser.parse_args()
-    train(args.config)
+    
+    # Parse overrides
+    overrides = {}
+    if args.overrides:
+        for override in args.overrides:
+            key, value = override.split("=")
+            # Try to convert value to appropriate type
+            try:
+                value = int(value)
+            except ValueError:
+                try:
+                    value = float(value)
+                except ValueError:
+                    if value.lower() == "true":
+                        value = True
+                    elif value.lower() == "false":
+                        value = False
+            overrides[key] = value
+    
+    train(args.config, overrides)

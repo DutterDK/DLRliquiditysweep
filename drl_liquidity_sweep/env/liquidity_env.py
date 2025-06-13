@@ -58,28 +58,21 @@ class LiquiditySweepEnv(gym.Env):
         if not required_cols.issubset(self.data.columns):
             raise ValueError(f"Data must contain columns: {required_cols}")
 
-    def reset(self, *, seed=None, options=None):
-        """Reset environment to initial state.
-
-        Returns:
-            observation: Initial state observation
-            info: Additional information
-        """
-        super().reset(seed=seed)
+    def reset(self, *args, **kwargs):
+        """Reset environment to initial state."""
         self.current_step = 0
         self.position = 0
-        self.entry_price = 0.0
-        self.equity = 0.0
-        self.equity_prev = 0.0  # Track previous equity for penalty
-        self.equity_history = [0.0]
-        self.max_equity = 0.0  # Reset max equity
+        self.entry_price = 0
+        self.equity = 0
+        self.max_equity = 0
         idx = self.data.index
-        if isinstance(idx, pd.DatetimeIndex):
-            self.current_date = idx[0].date()
+        if hasattr(idx, 'tz') or isinstance(idx, pd.DatetimeIndex):
+            self.current_date = idx[self.current_step].date()
         else:
-            self.current_date = None
+            self.current_date = idx[self.current_step]
         obs = self._get_obs()
-        return obs, {}
+        info = {}
+        return obs, info
 
     def _get_current_date(self):
         idx = self.data.index[self.current_step]
@@ -126,30 +119,95 @@ class LiquiditySweepEnv(gym.Env):
 
     def step(self, action):
         """Execute one time step within the environment."""
-        # Check if we need to reset due to day change
-        if self.reset_on_day_change and self.current_step > 0:
-            current_day = self.data.index[self.current_step].date()
-            next_day = self.data.index[self.current_step + 1].date()
-            if current_day != next_day:
-                return self.reset()
+        # Validate action
+        assert action in [0, 1, 2], f"invalid action: {action}"
 
-        # Get current state
+        current_bid = self.data.iloc[self.current_step]["bid"]
+        current_ask = self.data.iloc[self.current_step]["ask"]
+        reward = 0.0
+        closing_trade = False
+
+        if action == 1:  # agent says "long"
+            if self.position == 0:  # open new long
+                self.position = +1
+                self.entry_price = current_ask
+            elif self.position == -1:  # CLOSE short → flat
+                closing_trade = True
+                reward = self.entry_price - current_ask  # short P/L
+                self.position = 0
+                self.entry_price = 0.0
+        elif action == 2:  # agent says "short"
+            if self.position == 0:  # open new short
+                self.position = -1
+                self.entry_price = current_bid
+            elif self.position == +1:  # CLOSE long → flat
+                closing_trade = True
+                reward = current_bid - self.entry_price  # long P/L
+                self.position = 0
+                self.entry_price = 0.0
+        # action == 0 ("hold")  → do nothing; keep whatever position we already have
+
+        # subtract commission only on a closing trade
+        if closing_trade:
+            reward -= self.commission
+
+        # Update equity and max equity
+        self.equity += reward
+        self.max_equity = max(self.max_equity, self.equity)
+
+        # Apply drawdown penalty if enabled
+        if self.lambda_dd > 0 and self.max_equity > 0:
+            drawdown = (self.max_equity - self.equity) / self.max_equity
+            reward -= self.lambda_dd * drawdown
+
+        terminated = False
+        truncated = False
+        info = {}
         obs = self._get_obs()
-        
-        # Execute action
-        reward = self._execute_action(action)
-        
-        # Move to next step
-        self.current_step += 1
-        
-        # Check if episode is done
-        done = self.current_step >= len(self.data) - 1
-        
-        # Get new state
-        if not done:
-            obs = self._get_obs()
-        
-        return obs, reward, done, False, {}
+
+        # Calculate next index before any checks
+        next_idx = self.current_step + 1
+
+        # Check if we've reached the end of data
+        if next_idx >= len(self.data):
+            terminated = True
+            return obs, reward, terminated, truncated, info
+
+        # Check day change BEFORE advancing pointer
+        if self.reset_on_day_change:
+            idx = self.data.index
+            if next_idx < len(self.data):
+                if hasattr(idx, 'tz') or isinstance(idx, pd.DatetimeIndex):
+                    next_date = idx[next_idx].date()
+                else:
+                    next_date = idx[next_idx]
+            else:
+                next_date = self.current_date
+            if next_date != self.current_date:
+                terminated = True
+                # Reset environment for next day
+                self.current_step = next_idx
+                self.position = 0
+                self.entry_price = 0
+                self.equity = 0
+                self.max_equity = 0
+                if hasattr(idx, 'tz') or isinstance(idx, pd.DatetimeIndex):
+                    self.current_date = idx[next_idx].date()
+                else:
+                    self.current_date = idx[next_idx]
+                return obs, reward, terminated, truncated, info
+
+        # Advance step counter
+        self.current_step = next_idx
+
+        # Update current date
+        idx = self.data.index
+        if hasattr(idx, 'tz') or isinstance(idx, pd.DatetimeIndex):
+            self.current_date = idx[self.current_step].date()
+        else:
+            self.current_date = idx[self.current_step]
+
+        return obs, reward, terminated, truncated, info
 
     def render(self):
         """Render the environment."""
@@ -158,4 +216,46 @@ class LiquiditySweepEnv(gym.Env):
     def close(self):
         """Clean up resources."""
         pass  # Implement if needed
+
+    def _execute_action(self, action):
+        """Execute trading action and return reward."""
+        reward = 0
+        current_bid = self.data.iloc[self.current_step]["bid"]
+        current_ask = self.data.iloc[self.current_step]["ask"]
+
+        # Handle position changes
+        if self.position != 0:  # We have an open position
+            if (self.position == 1 and action == 2) or (self.position == -1 and action == 1):
+                # Close position
+                if self.position == 1:  # Close long
+                    reward = (current_bid - self.entry_price) - self.commission
+                else:  # Close short
+                    reward = (self.entry_price - current_ask) - self.commission
+                self.position = 0
+                self.entry_price = 0
+            else:
+                # Hold position
+                reward = 0
+        else:  # No position
+            if action == 1:  # Enter long
+                self.position = 1
+                self.entry_price = current_ask
+                reward = 0  # No commission on entry
+            elif action == 2:  # Enter short
+                self.position = -1
+                self.entry_price = current_bid
+                reward = 0  # No commission on entry
+            else:  # Hold
+                reward = 0
+
+        # Update equity and max equity
+        self.equity += reward
+        self.max_equity = max(self.max_equity, self.equity)
+
+        # Apply drawdown penalty if enabled
+        if self.lambda_dd > 0 and self.max_equity > 0:
+            drawdown = (self.max_equity - self.equity) / self.max_equity
+            reward -= self.lambda_dd * drawdown
+
+        return reward
 

@@ -118,3 +118,36 @@ def test_env_close_long_position(sample_data):
         exit_bid - entry_ask - 2 * env.commission
     )  # Commission on entry and exit
     assert reward == pytest.approx(expected_reward, abs=1e-4)
+
+
+def test_day_episode_length():
+    # 90 000 seconds (~25 h) so we cover >1 day
+    idx = pd.date_range("2025-01-01", periods=90_000, freq="1s")
+    df = pd.DataFrame({"bid": 1, "ask": 1.0002, "mid": 1.0001, "spread": 0.0002, "volume": 1}, index=idx)
+    env = LiquiditySweepEnv(df, lambda_dd=0, commission=0)
+    env.reset()
+    steps = 0
+    done = False
+    while not done:
+        _, _, done, _, _ = env.step(0)
+        steps += 1
+    assert 80_000 < steps < 88_000  # ≈ one UTC day
+
+
+def test_position_persists_until_opposite_action():
+    # Create a simple 2-bar DataFrame
+    df = pd.DataFrame({
+        'bid': [1.0, 1.1, 1.2],
+        'ask': [1.0002, 1.1002, 1.2002],
+        'mid': [1.0001, 1.1001, 1.2001],
+        'spread': [0.0002, 0.0002, 0.0002],
+        'volume': [1, 1, 1],
+    }, index=pd.date_range('2025-01-01', periods=3, freq='1min'))
+    env = LiquiditySweepEnv(df, commission=0)
+    env.reset()
+    env.step(1)  # open long
+    assert env.position == 1
+    env.step(0)  # hold, should STILL be long
+    assert env.position == 1
+    env.step(2)  # explicit close
+    assert env.position == 0
