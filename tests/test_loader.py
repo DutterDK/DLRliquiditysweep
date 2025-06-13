@@ -1,6 +1,5 @@
 from pathlib import Path
 from drl_liquidity_sweep.data.loader import load_tick_csv
-from datetime import datetime
 
 
 def test_load_tick_csv(tmp_path: Path):
