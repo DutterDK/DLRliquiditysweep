@@ -1,61 +1,32 @@
-"""Data loading utilities for MT5 tick data."""
-from __future__ import annotations
-from pathlib import Path
-from typing import Union
+"""Data loading utilities."""
 import pandas as pd
+from pathlib import Path
 
-def load_tick_csv(path: Union[str, Path], *, to_seconds: int = 1) -> pd.DataFrame:
-    """
-    Load an MT5 tick CSV with columns: time,bid,ask,volume.
-    Returns a DataFrame indexed by UTC Timestamp and columns:
-    ['bid', 'ask', 'mid', 'spread', 'volume'].
-    If `to_seconds>0`, resample to that second interval.
+
+def load_tick_csv(
+    filepath: Path | str, to_seconds: bool = False
+) -> pd.DataFrame:
+    """Load tick data from CSV file.
 
     Parameters
     ----------
-    path : Union[str, Path]
-        Path to the CSV file
-    to_seconds : int, optional
-        Resample interval in seconds, by default 1
+    filepath : Path | str
+        Path to CSV file
+    to_seconds : bool, optional
+        Convert time to seconds, by default False
 
     Returns
     -------
     pd.DataFrame
-        Processed tick data
-
-    Raises
-    ------
-    ValueError
-        If required columns are missing.
+        DataFrame with columns: time, bid, ask, volume
     """
-    path = Path(path)
     df = pd.read_csv(
-        path,
-        parse_dates=["timestamp"],
-        date_parser=lambda col: pd.to_datetime(col, utc=True),
-    )
-    req = {"bid", "ask", "volume"}
-    missing = req - set(df.columns)
-    if missing:
-        raise ValueError(f"Missing columns: {', '.join(sorted(missing))}")
-    df.set_index("time", inplace=True)
-    df.index = df.index.tz_localize("UTC")
-    df["mid"] = (df["bid"] + df["ask"]) / 2.0
-    df["spread"] = df["ask"] - df["bid"]
-    if to_seconds > 0:
-        rule = f"{to_seconds}s"
-        agg = {
-            "bid": "last",
-            "ask": "last",
-            "mid": "mean",
-            "spread": "mean",
-            "volume": "sum",
-        }
-        df = (
-            df.resample(rule, label="left", closed="left")
-            .agg(agg)
-            .dropna(how="any")
-            .astype("float64")
+        filepath,
+        parse_dates=['time'],
+        date_parser=lambda x: pd.to_datetime(
+            x, unit='s' if to_seconds else None
         )
-    return df.sort_index()
-
+    )
+    # Calculate mid price
+    df['mid'] = (df['bid'] + df['ask']) / 2
+    return df

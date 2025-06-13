@@ -92,9 +92,26 @@ def test_env_runs():
     obs, _ = env.reset()
     assert obs.shape == env.observation_space.shape
     for _ in range(12):
-        obs, reward, terminated, truncated, _ = env.step(
-            env.action_space.sample()
-        )
+        obs, reward, terminated, truncated, _ = env.step(env.action_space.sample())
         if terminated:
             break
     assert terminated or truncated
+
+
+def test_env_close_long_position(sample_data):
+    """Test closing a long position."""
+    env = LiquiditySweepEnv(sample_data)
+    obs, _ = env.reset()
+    # Step 1: Open long position
+    obs, _, _, _, _ = env.step(1)
+    # Step 2: Hold position for the rest of the data
+    for _ in range(len(sample_data) - 2):
+        obs, _, _, _, _ = env.step(0)
+    # Step 3: Close long position
+    obs, reward, done, truncated, info = env.step(2)
+    assert env.position == 0  # Back to flat
+    # Calculate expected reward
+    entry_ask = sample_data.iloc[0]["ask"]
+    exit_bid = sample_data.iloc[-1]["bid"]
+    expected_reward = exit_bid - entry_ask
+    assert reward == pytest.approx(expected_reward, 1e-4)

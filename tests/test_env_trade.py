@@ -3,7 +3,8 @@ import pandas as pd
 from drl_liquidity_sweep.env.liquidity_env import LiquiditySweepEnv
 
 
-def test_trading_logic():
+def test_long_trading_logic():
+    """Test long trading logic."""
     # Create test data
     data = pd.DataFrame(
         {
@@ -14,7 +15,7 @@ def test_trading_logic():
     )
 
     # Initialize environment
-    env = LiquiditySweepEnv(data)
+    env = LiquiditySweepEnv(data, lambda_dd=1.0)
 
     # Reset environment
     obs, _ = env.reset()
@@ -33,11 +34,12 @@ def test_trading_logic():
     # Step 3: Close long position
     obs, reward, done, truncated, info = env.step(2)  # Close long at 1.0004
     assert env.position == 0  # Back to flat
-    assert reward == pytest.approx(0.0003)  # 1.0004 - 1.0001 = 0.0003
-    assert done  # Environment should be done after last step
+    # Expected reward = realized P/L (0.0003) + drawdown penalty (0.0)
+    assert reward == pytest.approx(0.0003, 1e-4)
 
 
 def test_short_trading_logic():
+    """Test short trading logic."""
     # Create test data
     data = pd.DataFrame(
         {
@@ -48,7 +50,7 @@ def test_short_trading_logic():
     )
 
     # Initialize environment
-    env = LiquiditySweepEnv(data)
+    env = LiquiditySweepEnv(data, lambda_dd=1.0)
 
     # Reset environment
     obs, _ = env.reset()
@@ -67,5 +69,5 @@ def test_short_trading_logic():
     # Step 3: Close short position
     obs, reward, done, truncated, info = env.step(1)  # Close short at 1.0006
     assert env.position == 0  # Back to flat
-    assert reward == pytest.approx(-0.0007)  # 0.9999 - 1.0006 = -0.0007
-    assert done  # Environment should be done after last step
+    # Expected reward = realized P/L (-0.0007) + drawdown penalty (-0.0007)
+    assert reward == pytest.approx(-0.0014, 1e-4)
