@@ -10,7 +10,8 @@ def test_drawdown_penalty():
     data = pd.DataFrame({
         'mid': [1.0001, 1.0000],
         'bid': [1.0000, 0.9999],
-        'ask': [1.0002, 1.0001]
+        'ask': [1.0002, 1.0001],
+        'volume': [1, 1],  # Add volume column
     })
 
     # Initialize environment with high lambda for clear penalty

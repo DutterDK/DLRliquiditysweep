@@ -11,6 +11,7 @@ def test_long_trading_logic():
             "mid": [1.0000, 1.0005, 1.0005],
             "bid": [0.9999, 1.0004, 1.0004],
             "ask": [1.0001, 1.0006, 1.0006],
+            "volume": [1, 1, 1],  # Add volume column
         }
     )
 
@@ -46,6 +47,7 @@ def test_short_trading_logic():
             "mid": [1.0000, 1.0005, 1.0005],
             "bid": [0.9999, 1.0004, 1.0004],
             "ask": [1.0001, 1.0006, 1.0006],
+            "volume": [1, 1, 1],  # Add volume column
         }
     )
 

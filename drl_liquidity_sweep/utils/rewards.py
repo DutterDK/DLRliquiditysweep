@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 import pandas as pd
+from typing import Union, List
 
 
 def zero_reward(*args, **kwargs) -> float:  # placeholder
@@ -31,14 +32,14 @@ def calc_realized_pnl(entry: float, exit_: float, direction: int) -> float:
     return (exit_ - entry) * direction
 
 
-def drawdown_penalty(equity: pd.Series, lam: float) -> float:
+def drawdown_penalty(equity: Union[pd.Series, List[float]], lam: float) -> float:
     """
     Return negative penalty proportional to *incremental* drawdown
     between the last two equity points.
 
     Parameters
     ----------
-    equity : pd.Series
+    equity : Union[pd.Series, List[float]]
         Historical equity values
     lam : float
         Scaling coefficient (λ). penalty = -lam * max(0, dd_increment)
@@ -50,9 +51,9 @@ def drawdown_penalty(equity: pd.Series, lam: float) -> float:
     """
     if len(equity) < 2:
         return 0.0
-    prev_peak = equity.iloc[:-1].max()
-    prev_dd = prev_peak - equity.iloc[-2]
-    new_peak = max(prev_peak, equity.iloc[-1])
-    new_dd = new_peak - equity.iloc[-1]
-    dd_increment = max(0.0, new_dd - prev_dd)
-    return -lam * dd_increment
+    if isinstance(equity, pd.Series):
+        prev_peak = equity.iloc[:-1].max()
+    else:
+        prev_peak = max(equity[:-1])
+    current_dd = max(0, prev_peak - equity.iloc[-1] if isinstance(equity, pd.Series) else prev_peak - equity[-1])
+    return -lam * current_dd

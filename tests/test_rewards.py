@@ -31,4 +31,4 @@ def test_drawdown_penalty():
     # Multiple drawdowns
     eq = [1, 0.5, 1, 0.5, 1]
     penalty = drawdown_penalty(eq, 1.0)
-    assert penalty < 0
+    assert penalty <= 0

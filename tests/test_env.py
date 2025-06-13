@@ -31,6 +31,7 @@ def test_env_init(sample_data):
     assert env.current_step == 0
     assert env.position == 0
     assert env.entry_price == 0.0
+    assert obs.shape == env.observation_space.shape
 
 
 def test_env_reset(sample_data):
