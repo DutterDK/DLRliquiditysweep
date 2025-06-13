@@ -1,0 +1,16 @@
+env:
+  data_file: sample_ticks.csv  # <- you can keep using dummy DF for smoke test
+  bar_seconds: 1
+  lambda_dd: 0.001
+
+ppo:
+  n_steps: 128
+  batch_size: 128
+  learning_rate: 3.0e-4
+  gamma: 0.995
+  clip_range: 0.2
+  total_timesteps: 5000  # tiny for smoke
+
+misc:
+  seed: 42
+  log_dir: ./logs 

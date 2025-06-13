@@ -3,4 +3,7 @@ pytest>=8.0
 black
 flake8
 isort
-gymnasium>=0.29.1 
+gymnasium>=0.29.1
+stable-baselines3>=2.3
+torch>=2.2
+pyyaml 

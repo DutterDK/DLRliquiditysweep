@@ -92,7 +92,9 @@ def test_env_runs():
     obs, _ = env.reset()
     assert obs.shape == env.observation_space.shape
     for _ in range(12):
-        obs, reward, terminated, truncated, _ = env.step(env.action_space.sample())
+        obs, reward, terminated, truncated, _ = env.step(
+            env.action_space.sample()
+        )
         if terminated:
             break
     assert terminated or truncated
