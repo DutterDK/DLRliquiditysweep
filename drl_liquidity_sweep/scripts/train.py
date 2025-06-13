@@ -101,25 +101,12 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=str, required=True, help="Path to config file")
-    parser.add_argument("--overrides", nargs="+", help="Config overrides in format key=value")
+    parser.add_argument("--timesteps", type=int, help="Override total timesteps for training")
     args = parser.parse_args()
     
-    # Parse overrides
+    # Load config and apply timesteps override if provided
     overrides = {}
-    if args.overrides:
-        for override in args.overrides:
-            key, value = override.split("=")
-            # Try to convert value to appropriate type
-            try:
-                value = int(value)
-            except ValueError:
-                try:
-                    value = float(value)
-                except ValueError:
-                    if value.lower() == "true":
-                        value = True
-                    elif value.lower() == "false":
-                        value = False
-            overrides[key] = value
+    if args.timesteps:
+        overrides["ppo.total_timesteps"] = args.timesteps
     
     train(args.config, overrides)

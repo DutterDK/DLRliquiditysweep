@@ -154,11 +154,16 @@ class LiquiditySweepEnv(gym.Env):
         # Update equity and max equity
         self.equity += reward
         self.max_equity = max(self.max_equity, self.equity)
+        self.equity_history.append(self.equity)
 
         # Apply drawdown penalty if enabled
-        if self.lambda_dd > 0 and self.max_equity > 0:
-            drawdown = (self.max_equity - self.equity) / self.max_equity
-            reward -= self.lambda_dd * drawdown
+        if self.lambda_dd > 0:
+            dd_pen = drawdown_penalty(
+                pd.Series([self.equity_prev, self.equity]),
+                lam=self.lambda_dd,
+            )
+            reward += dd_pen
+        self.equity_prev = self.equity
 
         terminated = False
         truncated = False
@@ -207,6 +212,9 @@ class LiquiditySweepEnv(gym.Env):
         else:
             self.current_date = idx[self.current_step]
 
+        # Scale reward if enabled
+        reward *= self.reward_scale
+
         return obs, reward, terminated, truncated, info
 
     def render(self):
@@ -216,46 +224,4 @@ class LiquiditySweepEnv(gym.Env):
     def close(self):
         """Clean up resources."""
         pass  # Implement if needed
-
-    def _execute_action(self, action):
-        """Execute trading action and return reward."""
-        reward = 0
-        current_bid = self.data.iloc[self.current_step]["bid"]
-        current_ask = self.data.iloc[self.current_step]["ask"]
-
-        # Handle position changes
-        if self.position != 0:  # We have an open position
-            if (self.position == 1 and action == 2) or (self.position == -1 and action == 1):
-                # Close position
-                if self.position == 1:  # Close long
-                    reward = (current_bid - self.entry_price) - self.commission
-                else:  # Close short
-                    reward = (self.entry_price - current_ask) - self.commission
-                self.position = 0
-                self.entry_price = 0
-            else:
-                # Hold position
-                reward = 0
-        else:  # No position
-            if action == 1:  # Enter long
-                self.position = 1
-                self.entry_price = current_ask
-                reward = 0  # No commission on entry
-            elif action == 2:  # Enter short
-                self.position = -1
-                self.entry_price = current_bid
-                reward = 0  # No commission on entry
-            else:  # Hold
-                reward = 0
-
-        # Update equity and max equity
-        self.equity += reward
-        self.max_equity = max(self.max_equity, self.equity)
-
-        # Apply drawdown penalty if enabled
-        if self.lambda_dd > 0 and self.max_equity > 0:
-            drawdown = (self.max_equity - self.equity) / self.max_equity
-            reward -= self.lambda_dd * drawdown
-
-        return reward
 
