@@ -2,7 +2,9 @@ import yaml
 import os
 from drl_liquidity_sweep.env.liquidity_env import LiquiditySweepEnv
 from drl_liquidity_sweep.data.loader import load_tick_csv
+from drl_liquidity_sweep.utils.callbacks import TradingMetricsCallback
 from stable_baselines3 import PPO
+from stable_baselines3.common.callbacks import CheckpointCallback
 
 
 def make_env(cfg):
@@ -14,6 +16,7 @@ def make_env(cfg):
         data,
         lambda_dd=cfg["env"]["lambda_dd"],
         commission=cfg["env"]["commission"],
+        reset_on_day_change=cfg["env"].get("reset_on_day_change", True),
     )
     return env
 
@@ -22,7 +25,14 @@ def main(config_path: str):
     """Train a PPO agent on the trading environment."""
     with open(config_path, "r") as f:
         cfg = yaml.safe_load(f)
-    os.makedirs(cfg["misc"]["log_dir"], exist_ok=True)
+    
+    # Create necessary directories
+    log_dir = cfg["misc"]["log_dir"]
+    model_dir = os.path.join(log_dir, "models")
+    os.makedirs(log_dir, exist_ok=True)
+    os.makedirs(model_dir, exist_ok=True)
+    
+    # Create environment and model
     env = make_env(cfg)
     model = PPO(
         "MlpPolicy",
@@ -35,10 +45,32 @@ def main(config_path: str):
         gae_lambda=cfg["ppo"]["gae_lambda"],
         clip_range=cfg["ppo"]["clip_range"],
         verbose=1,
-        tensorboard_log=cfg["misc"]["log_dir"],
+        tensorboard_log=log_dir,
     )
-    model.learn(total_timesteps=cfg["misc"]["total_timesteps"])
-    model.save("models/ppo_liquidity_sweep")
+    
+    # Create callbacks
+    checkpoint_callback = CheckpointCallback(
+        save_freq=cfg["misc"].get("save_freq", 10000),
+        save_path=model_dir,
+        name_prefix="ppo_liquidity_sweep"
+    )
+    trading_callback = TradingMetricsCallback()
+    
+    # Train the model
+    model.learn(
+        total_timesteps=cfg["misc"]["total_timesteps"],
+        callback=[checkpoint_callback, trading_callback]
+    )
+    
+    # Save final model
+    final_model_path = os.path.join(model_dir, "final_model")
+    model.save(final_model_path)
+    
+    # Print instructions for viewing metrics
+    print(f"\nTraining completed! View metrics with:")
+    print(f"tensorboard --logdir={log_dir}")
+    
+    # Run a test episode
     obs, _ = env.reset()
     done = False
     while not done:
