@@ -5,7 +5,7 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import BaseCallback
 from drl_liquidity_sweep.env.liquidity_env import LiquiditySweepEnv
 from drl_liquidity_sweep.data.loader import load_tick_csv
-from drl_liquidity_sweep.utils.callbacks import TradingMetricsCallback
+from drl_liquidity_sweep.utils.callbacks import TradingMetricsCallback, ActionHistogram, CheckpointEveryStep
 
 
 class PrintStats(BaseCallback):
@@ -57,7 +57,9 @@ def train(config_path: str):
     # Create callbacks
     callbacks = [
         TradingMetricsCallback(),
-        PrintStats()
+        PrintStats(),
+        ActionHistogram(freq=50_000),
+        CheckpointEveryStep(save_freq=config["misc"]["save_every_steps"]),
     ]
     
     # Train model
