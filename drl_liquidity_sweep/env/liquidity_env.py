@@ -126,70 +126,30 @@ class LiquiditySweepEnv(gym.Env):
 
     def step(self, action):
         """Execute one time step within the environment."""
-        # Initialize debug actions list if not exists
-        self.debug_actions = getattr(self, "debug_actions", [])
+        # Check if we need to reset due to day change
+        if self.reset_on_day_change and self.current_step > 0:
+            current_day = self.data.index[self.current_step].date()
+            next_day = self.data.index[self.current_step + 1].date()
+            if current_day != next_day:
+                return self.reset()
+
+        # Get current state
+        obs = self._get_obs()
         
-        # Get current prices
-        current_bid = self.data.iloc[self.current_step]["bid"]
-        current_ask = self.data.iloc[self.current_step]["ask"]
-        current_mid = (current_bid + current_ask) / 2
-        
-        # Calculate reward based on action
-        reward = 0
-        done = False
-        info = {}
-        
-        # Handle position changes
-        if action != self.position:  # Position change
-            if self.position == 1:  # Close long
-                pnl = (current_bid - self.entry_price) - self.commission
-                reward = pnl
-                self.equity += pnl
-            elif self.position == -1:  # Close short
-                pnl = (self.entry_price - current_ask) - self.commission
-                reward = pnl
-                self.equity += pnl
-                
-            # Apply drawdown penalty only if max_equity > 0
-            if self.max_equity > 0 and self.equity < self.max_equity:
-                drawdown = (self.max_equity - self.equity) / self.max_equity
-                reward -= self.lambda_dd * drawdown
-            
-            # Update position
-            if action == 1:  # Enter long
-                self.position = 1
-                self.entry_price = current_ask
-            elif action == 2:  # Enter short
-                self.position = -1
-                self.entry_price = current_bid
-            else:  # Hold
-                self.position = 0
-                self.entry_price = 0
-                
-            # Update max equity
-            self.max_equity = max(self.max_equity, self.equity)
+        # Execute action
+        reward = self._execute_action(action)
         
         # Move to next step
         self.current_step += 1
         
         # Check if episode is done
-        if self.current_step >= len(self.data) - 1:
-            done = True
-            info["final_equity"] = self.equity
-            info["max_drawdown"] = (self.max_equity - self.equity) / self.max_equity if self.max_equity > 0 else 0
-        elif self.reset_on_day_change:
-            current_day = self.data.index[self.current_step].date()
-            if current_day != self.data.index[self.current_step - 1].date():
-                done = True
-                info["day_change"] = True
+        done = self.current_step >= len(self.data) - 1
         
-        # Store debug action
-        self.debug_actions.append(action)
+        # Get new state
+        if not done:
+            obs = self._get_obs()
         
-        obs = self._get_obs()
-        terminated = done
-        truncated = False
-        return obs, reward, terminated, truncated, info
+        return obs, reward, done, False, {}
 
     def render(self):
         """Render the environment."""
