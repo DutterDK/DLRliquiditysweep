@@ -1,20 +1,21 @@
-import pytest
 import pandas as pd
+import pytest
 from drl_liquidity_sweep.env.liquidity_env import LiquiditySweepEnv
 
-def test_commission_applied():
-    data = pd.DataFrame({
-        'mid': [1.0001, 1.0004],
-        'bid': [1.0000, 1.0003],
-        'ask': [1.0002, 1.0005],
-        'volume': [1, 1],
+
+def _df():
+    return pd.DataFrame({
+        "mid": [1.0000, 1.0006],
+        "bid": [0.9999, 1.0005],
+        "ask": [1.0001, 1.0007],
+        "spread": [0.0002, 0.0002],
+        "volume": [1, 1],
     })
-    env = LiquiditySweepEnv(data, commission=0.00005)
-    obs, _ = env.reset()
-    # Open long
-    obs, reward, done, truncated, info = env.step(1)
-    # Close long
-    obs, reward, done, truncated, info = env.step(2)
-    # Realized P/L: entry at ask[0]=1.0002, exit at bid[1]=1.0003
-    # Profit = 1.0003 - 1.0002 = 0.0001, minus commission = 0.00005
-    assert reward == pytest.approx(0.00005) 
+
+
+def test_commission_deducted():
+    env = LiquiditySweepEnv(_df(), commission=0.00005)
+    env.reset()
+    _, _, _, _, _ = env.step(1)  # open long @ 1.0001
+    obs, r, _, _, _ = env.step(2)  # close long @ 1.0005 → gross 0.0004
+    assert r == pytest.approx(0.00035) 

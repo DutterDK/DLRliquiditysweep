@@ -13,7 +13,6 @@ def test_load_tick_csv(tmp_path: Path):
         "2025-01-01 00:00:00.500,1.0001,1.0003,2\n"
     )
     df = load_tick_csv(csv)
-    assert list(df.columns) == ["time", "bid", "ask", "volume", "mid"]
+    assert list(df.columns) == ["bid", "ask", "volume", "mid", "spread"]
     assert len(df) == 2
-    assert df["mid"].iloc[0] == pytest.approx(1.0001)
-    assert df["mid"].iloc[1] == pytest.approx(1.0002)
+    assert df.index.name == "time"

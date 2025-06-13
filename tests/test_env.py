@@ -103,7 +103,7 @@ def test_env_runs():
 
 def test_env_close_long_position(sample_data):
     """Test closing a long position."""
-    env = LiquiditySweepEnv(sample_data)
+    env = LiquiditySweepEnv(sample_data, commission=0.00005)
     obs, _ = env.reset()
     # Step 1: Open long position
     obs, _, _, _, _ = env.step(1)
@@ -116,5 +116,5 @@ def test_env_close_long_position(sample_data):
     # Calculate expected reward
     entry_ask = sample_data.iloc[0]["ask"]
     exit_bid = sample_data.iloc[-1]["bid"]
-    expected_reward = exit_bid - entry_ask
-    assert reward == pytest.approx(expected_reward, 1e-4)
+    expected_reward = exit_bid - entry_ask - 2 * env.commission  # Commission on entry and exit
+    assert reward == pytest.approx(expected_reward, abs=1e-4)

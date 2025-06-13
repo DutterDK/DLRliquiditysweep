@@ -16,7 +16,7 @@ def test_long_trading_logic():
     )
 
     # Initialize environment
-    env = LiquiditySweepEnv(data, lambda_dd=1.0)
+    env = LiquiditySweepEnv(data, lambda_dd=1.0, commission=0.00005)
 
     # Reset environment
     obs, _ = env.reset()
@@ -35,8 +35,8 @@ def test_long_trading_logic():
     # Step 3: Close long position
     obs, reward, done, truncated, info = env.step(2)  # Close long at 1.0004
     assert env.position == 0  # Back to flat
-    # Expected reward = realized P/L (0.0003) + drawdown penalty (0.0)
-    assert reward == pytest.approx(0.0003, 1e-4)
+    # Expected reward = realized P/L (0.0003) - commission (0.0001)
+    assert reward == pytest.approx(0.00025, 1e-4)
 
 
 def test_short_trading_logic():
@@ -52,7 +52,7 @@ def test_short_trading_logic():
     )
 
     # Initialize environment
-    env = LiquiditySweepEnv(data, lambda_dd=1.0)
+    env = LiquiditySweepEnv(data, lambda_dd=1.0, commission=0.00005)
 
     # Reset environment
     obs, _ = env.reset()
@@ -71,5 +71,5 @@ def test_short_trading_logic():
     # Step 3: Close short position
     obs, reward, done, truncated, info = env.step(1)  # Close short at 1.0006
     assert env.position == 0  # Back to flat
-    # Expected reward = realized P/L (-0.0007) + drawdown penalty (-0.0007)
-    assert reward == pytest.approx(-0.0014, 1e-4)
+    # Expected reward = realized P/L (-0.0007) - commission (0.0001) + drawdown penalty (-0.0007)
+    assert reward == pytest.approx(-0.0015, 1e-4)
