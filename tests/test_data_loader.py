@@ -29,27 +29,31 @@ def sample_tick_data():
 
 def test_load_tick_csv_basic(sample_tick_data):
     """Test basic tick data loading."""
-    with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as tmp:
-        sample_tick_data.to_csv(tmp.name, index=False)
-        df = load_tick_csv(tmp.name)
-        os.unlink(tmp.name)
-
-    assert isinstance(df, pd.DataFrame)
-    assert isinstance(df.index, pd.DatetimeIndex)
-    assert df.index.tz == "UTC"
-    assert all(col in df.columns for col in ["bid", "ask", "mid", "spread", "volume"])
-    assert len(df) == 3
+    fd, tmp_name = tempfile.mkstemp(suffix=".csv")
+    os.close(fd)
+    try:
+        sample_tick_data.to_csv(tmp_name, index=False)
+        df = load_tick_csv(tmp_name)
+        assert isinstance(df, pd.DataFrame)
+        assert isinstance(df.index, pd.DatetimeIndex)
+        assert df.index.tz == "UTC"
+        assert all(col in df.columns for col in ["bid", "ask", "mid", "spread", "volume"])
+        assert len(df) == 3
+    finally:
+        os.unlink(tmp_name)
 
 
 def test_load_tick_csv_resampling(sample_tick_data):
     """Test tick data loading with resampling."""
-    with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as tmp:
-        sample_tick_data.to_csv(tmp.name, index=False)
-        df = load_tick_csv(tmp.name, to_seconds=2)
-        os.unlink(tmp.name)
-
-    assert isinstance(df, pd.DataFrame)
-    assert len(df) == 2  # 3 ticks resampled to 2-second bars
+    fd, tmp_name = tempfile.mkstemp(suffix=".csv")
+    os.close(fd)
+    try:
+        sample_tick_data.to_csv(tmp_name, index=False)
+        df = load_tick_csv(tmp_name, to_seconds=2)
+        assert isinstance(df, pd.DataFrame)
+        assert len(df) == 2  # 3 ticks resampled to 2-second bars
+    finally:
+        os.unlink(tmp_name)
 
 
 def test_load_tick_csv_missing_columns():
@@ -58,11 +62,14 @@ def test_load_tick_csv_missing_columns():
         "time": ["2024-01-01 00:00:00.000"],
         "bid": [1.0000],
     }
-    with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as tmp:
-        pd.DataFrame(data).to_csv(tmp.name, index=False)
+    fd, tmp_name = tempfile.mkstemp(suffix=".csv")
+    os.close(fd)
+    try:
+        pd.DataFrame(data).to_csv(tmp_name, index=False)
         with pytest.raises(ValueError, match="Missing columns"):
-            load_tick_csv(tmp.name)
-        os.unlink(tmp.name)
+            load_tick_csv(tmp_name)
+    finally:
+        os.unlink(tmp_name)
 
 
 def test_load_tick_csv_invalid_file():
