@@ -19,30 +19,27 @@ def make_env(cfg):
     )
 
 
-def main(cfg_path="config/default_config.yaml"):
-    """Main training function."""
-    # Load config
-    with open(cfg_path) as f:
+def main():
+    # Load configuration
+    with open("config/default_config.yaml", "r") as f:
         cfg = yaml.safe_load(f)
     # Create environment
-    env = gym.wrappers.TimeLimit(make_env(cfg), max_episode_steps=2000)
-    # Create model
-    model = PPO(
-        "MlpPolicy",
-        env,
-        n_steps=cfg["ppo"]["n_steps"],
-        batch_size=cfg["ppo"]["batch_size"],
-        learning_rate=cfg["ppo"]["learning_rate"],
-        gamma=cfg["ppo"]["gamma"],
-        clip_range=cfg["ppo"]["clip_range"],
-        verbose=1,
-        seed=cfg["misc"]["seed"],
-    )
-    # Train model
-    model.learn(cfg["ppo"]["total_timesteps"])
-    # Save model
+    env = make_env(cfg)
+    # Create PPO model
+    model = PPO("MlpPolicy", env, verbose=1, **cfg["ppo"])
+    # Train the model
+    model.learn(total_timesteps=cfg["misc"]["total_timesteps"])
+    # Save the model
     os.makedirs("models", exist_ok=True)
     model.save("models/ppo_liquidity_sweep")
+    # Evaluate: print final equity
+    obs, _ = env.reset()
+    done = False
+    while not done:
+        action, _ = model.predict(obs, deterministic=True)
+        obs, _, terminated, truncated, _ = env.step(action)
+        done = terminated or truncated
+    print("Final equity:", env.equity)
 
 
 if __name__ == "__main__":
