@@ -131,4 +131,15 @@ isort .
 
 ## License
 
-MIT License - see LICENSE file for details 
+MIT License - see LICENSE file for details
+
+## TensorBoard
+
+To monitor training progress with TensorBoard:
+
+```sh
+pip install tensorboard  # if not already installed
+tensorboard --logdir=logs
+```
+
+This will launch a local server where you can view training metrics in your browser. 

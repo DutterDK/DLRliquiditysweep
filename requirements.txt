@@ -6,4 +6,5 @@ isort
 gymnasium>=0.29.1
 stable-baselines3>=2.3
 torch>=2.2
-pyyaml 
+pyyaml
+MetaTrader5>=5.0.45 

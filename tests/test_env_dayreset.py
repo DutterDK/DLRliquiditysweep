@@ -45,3 +45,27 @@ def test_daily_reset():
     # Should only terminate at the end of data
     assert last_terminated  # Should terminate at end of data
     assert steps == len(data)  # Should use all data
+
+
+def test_day_reset():
+    times = pd.date_range("2025-01-01 00:00:00", periods=3, freq="12H").append(
+        pd.date_range("2025-01-02 00:00:00", periods=3, freq="12H")
+    )
+    df = pd.DataFrame(
+        {
+            "bid": [1] * 6,
+            "ask": [1.0002] * 6,
+            "mid": [1.0001] * 6,
+            "spread": [0.0002] * 6,
+            "volume": [1] * 6,
+        },
+        index=times,
+    )
+    env = LiquiditySweepEnv(df, reset_on_day_change=True)
+    env.reset()
+    # step through first day
+    done = False
+    while not done:
+        _, _, done, _, _ = env.step(0)
+    # after termination, reset should start second day
+    assert env.current_date == pd.Timestamp("2025-01-02").date()

@@ -43,4 +43,4 @@ def drawdown_penalty(equity, lam=1.0):
             max_equity = eq
         else:
             penalty += lam * (max_equity - eq)
-    return penalty
+    return -penalty
