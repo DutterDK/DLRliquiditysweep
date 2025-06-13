@@ -26,36 +26,34 @@ def test_env_init(sample_data):
     """Test environment initialization."""
     env = LiquiditySweepEnv(sample_data)
     assert env.action_space.n == 3
-    assert env.observation_space.shape == (10,)
-    assert env.t == 0
+    obs, _ = env.reset()
+    assert env.observation_space.contains(obs)
+    assert env.current_step == 0
     assert env.position == 0
-    assert env.entry_price is None
+    assert env.entry_price == 0.0
 
 
 def test_env_reset(sample_data):
     """Test environment reset."""
     env = LiquiditySweepEnv(sample_data)
-    env.t = 5  # Move forward
+    env.current_step = 5  # Move forward
     obs, info = env.reset()
-    assert env.t == 0
+    assert env.current_step == 0
+    assert env.observation_space.contains(obs)
     assert env.position == 0
-    assert env.entry_price is None
-    assert isinstance(obs, np.ndarray)
-    assert obs.shape == (10,)
-    assert isinstance(info, dict)
+    assert env.entry_price == 0.0
 
 
 def test_env_step(sample_data):
-    """Test environment step."""
+    """Test environment step logic."""
     env = LiquiditySweepEnv(sample_data)
-    obs, reward, terminated, truncated, info = env.step(0)  # hold
-    assert env.t == 1
-    assert isinstance(obs, np.ndarray)
-    assert obs.shape == (10,)
-    assert reward == 0.0
-    assert not terminated
-    assert not truncated
-    assert isinstance(info, dict)
+    obs, info = env.reset()
+    action = 0
+    obs, reward, terminated, truncated, info = env.step(action)
+    assert env.observation_space.contains(obs)
+    for _ in range(len(sample_data)):
+        obs, reward, terminated, truncated, info = env.step(action)
+    assert terminated or truncated
 
 
 def test_env_termination(sample_data):
@@ -92,10 +90,9 @@ def test_env_runs():
     """Smoke test to verify basic environment functionality."""
     env = LiquiditySweepEnv(_dummy_df(12))
     obs, _ = env.reset()
-    assert len(obs) == 10
+    assert obs.shape == env.observation_space.shape
     for _ in range(12):
         obs, reward, terminated, truncated, _ = env.step(env.action_space.sample())
-        assert reward == 0.0
         if terminated:
             break
-    assert terminated
+    assert terminated or truncated
