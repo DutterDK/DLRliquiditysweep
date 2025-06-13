@@ -93,9 +93,7 @@ def test_env_runs():
     obs, _ = env.reset()
     assert obs.shape == env.observation_space.shape
     for _ in range(12):
-        obs, reward, terminated, truncated, _ = env.step(
-            env.action_space.sample()
-        )
+        obs, reward, terminated, truncated, _ = env.step(env.action_space.sample())
         if terminated:
             break
     assert terminated or truncated
@@ -116,5 +114,7 @@ def test_env_close_long_position(sample_data):
     # Calculate expected reward
     entry_ask = sample_data.iloc[0]["ask"]
     exit_bid = sample_data.iloc[-1]["bid"]
-    expected_reward = exit_bid - entry_ask - 2 * env.commission  # Commission on entry and exit
+    expected_reward = (
+        exit_bid - entry_ask - 2 * env.commission
+    )  # Commission on entry and exit
     assert reward == pytest.approx(expected_reward, abs=1e-4)

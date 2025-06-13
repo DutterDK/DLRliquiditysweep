@@ -7,12 +7,14 @@ from drl_liquidity_sweep.env.liquidity_env import LiquiditySweepEnv
 def test_drawdown_penalty():
     """Test drawdown penalty calculation in environment."""
     # Create test data with specific bid/ask prices
-    data = pd.DataFrame({
-        'mid': [1.0001, 1.0000],
-        'bid': [1.0000, 0.9999],
-        'ask': [1.0002, 1.0001],
-        'volume': [1, 1],  # Add volume column
-    })
+    data = pd.DataFrame(
+        {
+            "mid": [1.0001, 1.0000],
+            "bid": [1.0000, 0.9999],
+            "ask": [1.0002, 1.0001],
+            "volume": [1, 1],  # Add volume column
+        }
+    )
 
     # Initialize environment with high lambda for clear penalty
     env = LiquiditySweepEnv(data, lambda_dd=1000.0, commission=0.00005)

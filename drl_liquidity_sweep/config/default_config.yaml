@@ -1,13 +1,15 @@
 env:
-  data_file: "data/ES_2024-01-01.csv"
-  bar_seconds: 1
+  data_file: sample_ticks.csv   # placeholder
+  bar_seconds: 5                # new default
+  lambda_dd: 0.001
+  commission: 0.00005
 
 ppo:
-  learning_rate: 0.0003
-  n_steps: 2048
-  batch_size: 64
+  learning_rate: 3.0e-4
+  n_steps: 128
+  batch_size: 128
   n_epochs: 10
-  gamma: 0.99
+  gamma: 0.995
   gae_lambda: 0.95
   clip_range: 0.2
   clip_range_vf: null
@@ -21,10 +23,10 @@ ppo:
   tensorboard_log: null
   policy_kwargs: null
   verbose: 0
-  seed: null
+  seed: 42
   device: auto
   _init_setup_model: true
 
 misc:
-  total_timesteps: 1000000
-  log_dir: "logs" 
+  total_timesteps: 5000
+  log_dir: ./logs 

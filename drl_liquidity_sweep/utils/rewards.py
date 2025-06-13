@@ -32,28 +32,15 @@ def calc_realized_pnl(entry: float, exit_: float, direction: int) -> float:
     return (exit_ - entry) * direction
 
 
-def drawdown_penalty(equity: Union[pd.Series, List[float]], lam: float) -> float:
-    """
-    Return negative penalty proportional to *incremental* drawdown
-    between the last two equity points.
-
-    Parameters
-    ----------
-    equity : Union[pd.Series, List[float]]
-        Historical equity values
-    lam : float
-        Scaling coefficient (λ). penalty = -lam * max(0, dd_increment)
-
-    Returns
-    -------
-    float
-        Negative penalty proportional to incremental drawdown
-    """
+def drawdown_penalty(equity, lam=1.0):
+    """Calculate drawdown penalty for a series of equity values."""
     if len(equity) < 2:
         return 0.0
-    if isinstance(equity, pd.Series):
-        prev_peak = equity.iloc[:-1].max()
-    else:
-        prev_peak = max(equity[:-1])
-    current_dd = max(0, prev_peak - equity.iloc[-1] if isinstance(equity, pd.Series) else prev_peak - equity[-1])
-    return -lam * current_dd
+    max_equity = equity[0]
+    penalty = 0.0
+    for eq in equity[1:]:
+        if eq > max_equity:
+            max_equity = eq
+        else:
+            penalty += lam * (max_equity - eq)
+    return penalty

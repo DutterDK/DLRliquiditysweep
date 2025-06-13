@@ -1,7 +1,5 @@
 import pytest
-from drl_liquidity_sweep.utils.rewards import (
-    calc_realized_pnl, drawdown_penalty
-)
+from drl_liquidity_sweep.utils.rewards import calc_realized_pnl, drawdown_penalty
 
 
 def test_calc_realized_pnl():
