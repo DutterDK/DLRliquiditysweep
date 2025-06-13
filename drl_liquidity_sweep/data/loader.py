@@ -49,7 +49,7 @@ def load_tick_csv(path: Union[str, Path], *, to_seconds: int = 1) -> pd.DataFram
         agg = {
             "bid": "last",
             "ask": "last",
-            "mid": "last",
+            "mid": "mean",
             "spread": "mean",
             "volume": "sum",
         }
@@ -59,4 +59,4 @@ def load_tick_csv(path: Union[str, Path], *, to_seconds: int = 1) -> pd.DataFram
             .dropna(how="any")
             .astype("float64")
         )
-    return df.sort_index() 
+    return df.sort_index()

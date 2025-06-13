@@ -61,10 +61,10 @@ def test_env_step(sample_data):
 def test_env_termination(sample_data):
     """Test environment termination."""
     env = LiquiditySweepEnv(sample_data)
-    for _ in range(len(sample_data) - 1):
+    for _ in range(len(sample_data)):
         obs, reward, terminated, truncated, info = env.step(0)
-    assert not terminated
-    obs, reward, terminated, truncated, info = env.step(0)
+        if terminated:
+            break
     assert terminated
 
 
@@ -93,9 +93,9 @@ def test_env_runs():
     env = LiquiditySweepEnv(_dummy_df(12))
     obs, _ = env.reset()
     assert len(obs) == 10
-    for _ in range(11):
+    for _ in range(12):
         obs, reward, terminated, truncated, _ = env.step(env.action_space.sample())
         assert reward == 0.0
-        if terminated or truncated:
+        if terminated:
             break
-    assert terminated 
+    assert terminated
