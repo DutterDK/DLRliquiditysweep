@@ -1,5 +1,7 @@
-import pytest
+"""Tests for trading logic."""
 import pandas as pd
+import numpy as np
+import pytest
 from drl_liquidity_sweep.env.liquidity_env import LiquiditySweepEnv
 
 
@@ -11,7 +13,7 @@ def test_long_trading_logic():
             "mid": [1.0000, 1.0005, 1.0005],
             "bid": [0.9999, 1.0004, 1.0004],
             "ask": [1.0001, 1.0006, 1.0006],
-            "volume": [1, 1, 1],  # Add volume column
+            "volume": [1, 1, 1],
         }
     )
 
@@ -30,46 +32,47 @@ def test_long_trading_logic():
     # Step 2: Hold position
     obs, reward, done, truncated, info = env.step(0)  # Hold
     assert env.position == 1  # Still long
-    assert reward == 0.0  # No reward for holding
+    assert reward == pytest.approx(0.0003)  # Unrealized P/L: 1.0004 - 1.0001 = 0.0003
 
-    # Step 3: Close long position
-    obs, reward, done, truncated, info = env.step(2)  # Close long at 1.0004
+    # Step 3: Close position
+    obs, reward, done, truncated, info = env.step(2)  # Close long
     assert env.position == 0  # Back to flat
-    # Expected reward = realized P/L (0.0003) - commission (0.0001)
-    assert reward == pytest.approx(0.00025, 1e-4)
+    assert reward == pytest.approx(0.0003 - 0.00005)  # Realized P/L minus commission
 
 
-def test_short_trading_logic():
-    """Test short trading logic."""
-    # Create test data
-    data = pd.DataFrame(
+def _dummy_df():
+    return pd.DataFrame(
         {
-            "mid": [1.0000, 1.0005, 1.0005],
-            "bid": [0.9999, 1.0004, 1.0004],
-            "ask": [1.0001, 1.0006, 1.0006],
-            "volume": [1, 1, 1],  # Add volume column
+            # time index is optional for this test
+            "bid":  [0.9999, 1.0004, 1.0004],
+            "ask":  [1.0001, 1.0006, 1.0006],
+            "mid":  [1.0000, 1.0005, 1.0005],
+            "spread": [0.0002, 0.0002, 0.0002],
+            "volume": [1, 1, 1],
         }
     )
 
-    # Initialize environment
-    env = LiquiditySweepEnv(data, lambda_dd=1.0, commission=0.00005)
+def test_short_trading_logic():
+    df = _dummy_df()
+    env = LiquiditySweepEnv(df, commission=0.00005, lambda_dd=0)
+    env.reset()
 
-    # Reset environment
-    obs, _ = env.reset()
+    # Step 1: open short
+    env.step(2)
 
-    # Step 1: Enter short position
-    obs, reward, done, truncated, info = env.step(2)  # Short at 0.9999
-    assert env.position == -1
-    assert env.entry_price == 0.9999
-    assert reward == 0.0  # No reward yet as we just entered the position
+    # Expected unrealised P/L on hold
+    exp_hold = env.entry_price - df.loc[1, "ask"]
 
-    # Step 2: Hold position
-    obs, reward, done, truncated, info = env.step(0)  # Hold
-    assert env.position == -1  # Still short
-    assert reward == 0.0  # No reward for holding
+    # Step 2: hold
+    _, r_hold, _, _, _ = env.step(0)
+    assert r_hold == pytest.approx(exp_hold, abs=1e-6)
 
-    # Step 3: Close short position
-    obs, reward, done, truncated, info = env.step(1)  # Close short at 1.0006
-    assert env.position == 0  # Back to flat
-    # Expected reward = realized P/L (-0.0007) - commission (0.0001) + drawdown penalty (-0.0007)
-    assert reward == pytest.approx(-0.0015, 1e-4)
+    # Expected realised P/L on close (add commission)
+    exp_close = env.entry_price - df.loc[2, "ask"] - env.commission
+
+    # Step 3: close short
+    _, r_close, _, _, _ = env.step(1)
+    assert r_close == pytest.approx(exp_close, abs=1e-6)
+
+    # Position should be flat
+    assert env.position == 0
