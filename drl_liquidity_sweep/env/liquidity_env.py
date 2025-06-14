@@ -47,9 +47,9 @@ class LiquiditySweepEnv(gym.Env):
         # Action space: 0=hold, 1=long, 2=short
         self.action_space = spaces.Discrete(3)
 
-        # Observation space: 14 features
+        # Observation space: 16 features
         self.observation_space = spaces.Box(
-            low=-np.inf, high=np.inf, shape=(14,), dtype=np.float32
+            low=-np.inf, high=np.inf, shape=(16,), dtype=np.float32
         )
 
         # Trading state
@@ -157,6 +157,10 @@ class LiquiditySweepEnv(gym.Env):
             truncated  = False     # not an artificial truncation
             return self._get_observation(), reward, terminated, truncated, {}
 
+        # Small time-penalty for holding a position
+        if self.position != 0:
+            reward -= 0.00001    # 0.1 pip per 10 s held
+
         # Increment step counter
         self.current_step += 1
         return self._get_observation(), reward, terminated, truncated, {}
@@ -183,6 +187,11 @@ class LiquiditySweepEnv(gym.Env):
         dist_hi = roll_hi - mid
         dist_lo = mid - roll_lo
 
+        # new features
+        round_dist = ((mid * 10_000) % 50) / 10_000      # distance to nearest 5-pip
+        hour = ts.hour + ts.minute/60
+        killzone = 1.0 if 13 <= hour <= 16 or 1 <= hour <= 3 else 0.0
+
         obs = [
             mid, spread, volume,
             hour_sin, hour_cos,
@@ -194,6 +203,7 @@ class LiquiditySweepEnv(gym.Env):
             np.mean(self.equity_history) if self.equity_history else 0.0,
             np.std(self.equity_history)  if self.equity_history else 0.0,
             dist_hi, dist_lo,
+            round_dist, killzone
         ]
         return np.array(obs, dtype=np.float32)
 
