@@ -47,9 +47,9 @@ class LiquiditySweepEnv(gym.Env):
         # Action space: 0=hold, 1=long, 2=short
         self.action_space = spaces.Discrete(3)
 
-        # Observation space: 16 features
+        # Observation space: 17 features
         self.observation_space = spaces.Box(
-            low=-np.inf, high=np.inf, shape=(16,), dtype=np.float32
+            low=-np.inf, high=np.inf, shape=(17,), dtype=np.float32
         )
 
         # Trading state
@@ -159,7 +159,7 @@ class LiquiditySweepEnv(gym.Env):
 
         # Small time-penalty for holding a position
         if self.position != 0:
-            reward -= 0.00001    # 0.1 pip per 10 s held
+            reward -= 0.00005    # increased time penalty
 
         # Increment step counter
         self.current_step += 1
@@ -203,7 +203,8 @@ class LiquiditySweepEnv(gym.Env):
             np.mean(self.equity_history) if self.equity_history else 0.0,
             np.std(self.equity_history)  if self.equity_history else 0.0,
             dist_hi, dist_lo,
-            round_dist, killzone
+            round_dist, killzone,
+            killzone  # append killzone again for 17th feature
         ]
         return np.array(obs, dtype=np.float32)
 

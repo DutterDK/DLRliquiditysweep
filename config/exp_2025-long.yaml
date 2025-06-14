@@ -1,12 +1,12 @@
 env:
   data_file:   data/eurusd_1s/EURUSD_ALL.parquet   # 12-month Parquet
-  bar_seconds: 1
+  bar_seconds: 5
   train_start: "2024-05-01"
   train_end:   "2025-01-31"
   test_start:  "2025-02-01"
   test_end:    "2025-05-01"
 
-  lambda_dd:   0.0001      # 10× smaller → easier early learning
+  lambda_dd:   0.0002      # 10× smaller → easier early learning
   commission:  0.00000     # OFF for this run; re-enable later
   reset_on_day_change: true
 
