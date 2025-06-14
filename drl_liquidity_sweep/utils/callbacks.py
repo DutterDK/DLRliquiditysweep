@@ -1,6 +1,7 @@
 from typing import Dict, Any
 from stable_baselines3.common.callbacks import BaseCallback
 import numpy as np, os, torch
+from stable_baselines3.common.vec_env import VecEnv
 
 
 class TradingMetricsCallback(BaseCallback):
@@ -88,3 +89,21 @@ class CheckpointEveryStep(BaseCallback):
             torch.save(self.training_env.get_attr("equity"), f"{fname}.equity.pt")
             print("   ✔ checkpoint", fname)
         return True
+
+
+class EquityCallback(BaseCallback):
+    """Callback to track equity over time."""
+
+    def __init__(self, verbose=0):
+        super().__init__(verbose)
+        self.equity_history = []
+
+    def _on_step(self):
+        """Called at each step of the environment."""
+        for env in self.training_env.envs:
+            self.equity_history.append(env.equity)
+        return True
+
+    def get_equity_history(self):
+        """Return the equity history."""
+        return self.equity_history

@@ -7,4 +7,6 @@ gymnasium>=0.29.1
 stable-baselines3>=2.3
 torch>=2.2
 pyyaml
-MetaTrader5>=5.0.45 
+MetaTrader5>=5.0.45
+polars>=0.20.0
+pyarrow   # parquet backend for polars 

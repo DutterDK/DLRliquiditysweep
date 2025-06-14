@@ -11,7 +11,13 @@ def test_day_episode_length():
     env.reset()
     steps = 0
     done = False
-    while not done:
+    while not done and steps < 100_000:
         _, _, done, _, _ = env.step(0)
         steps += 1
-    assert 80_000 < steps < 90_000      # one full trading day 
+        print(f"Step: {steps}, Done: {done}")
+    if steps >= 100_000:
+        print("Safety break hit: done flag never set!")
+    assert 80_000 < steps < 90_000  # one full trading day
+
+    obs, _ = env.reset()
+    assert obs.shape == env.observation_space.shape == (14,)

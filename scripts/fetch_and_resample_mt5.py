@@ -11,15 +11,16 @@ from pathlib import Path
 import MetaTrader5 as mt5
 import pandas as pd
 
-SYMBOL      = "EURUSD"
-MONTHS      = 12
+SYMBOL = "EURUSD"
+MONTHS = 12
 BAR_SECONDS = 1
-OUT_DIR     = Path("data/eurusd_1s")
+OUT_DIR = Path("data/eurusd_1s")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
+
 
 def fetch_month(year: int, month: int) -> pd.DataFrame:
     first = datetime(year, month, 1)
-    last  = (first + timedelta(days=32)).replace(day=1) - timedelta(seconds=1)
+    last = (first + timedelta(days=32)).replace(day=1) - timedelta(seconds=1)
     ticks = mt5.copy_ticks_range(SYMBOL, first, last, mt5.COPY_TICKS_ALL)
     df = pd.DataFrame(ticks)[["time", "bid", "ask", "volume"]]
     df["time"] = pd.to_datetime(df["time"], unit="s", utc=True)
@@ -27,13 +28,16 @@ def fetch_month(year: int, month: int) -> pd.DataFrame:
     df["mid"] = (df["bid"] + df["ask"]) / 2
     df["spread"] = df["ask"] - df["bid"]
     rule = f"{BAR_SECONDS}s"
-    agg  = {
-        "bid": "last", "ask": "last",
-        "mid": "last", "spread": "mean",
+    agg = {
+        "bid": "last",
+        "ask": "last",
+        "mid": "last",
+        "spread": "mean",
         "volume": "sum",
     }
     bars = df.resample(rule, label="left", closed="left").agg(agg).dropna()
     return bars.reset_index()
+
 
 def main():
     if not mt5.initialize():
@@ -54,5 +58,6 @@ def main():
     full.to_parquet(OUT_DIR / f"{SYMBOL}_ALL.parquet", index=False)
     print(f"Final merged bars: {len(full):,}")
 
+
 if __name__ == "__main__":
-    main() 
+    main()

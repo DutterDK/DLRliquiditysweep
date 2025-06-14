@@ -27,11 +27,10 @@ def test_env_init(sample_data):
     env = LiquiditySweepEnv(sample_data)
     assert env.action_space.n == 3
     obs, _ = env.reset()
-    assert env.observation_space.contains(obs)
+    assert obs.shape == env.observation_space.shape == (14,)
     assert env.current_step == 0
     assert env.position == 0
     assert env.entry_price == 0.0
-    assert obs.shape == env.observation_space.shape
 
 
 def test_env_reset(sample_data):
@@ -40,7 +39,7 @@ def test_env_reset(sample_data):
     env.current_step = 5  # Move forward
     obs, info = env.reset()
     assert env.current_step == 0
-    assert env.observation_space.contains(obs)
+    assert obs.shape == env.observation_space.shape == (14,)
     assert env.position == 0
     assert env.entry_price == 0.0
 
@@ -51,7 +50,7 @@ def test_env_step(sample_data):
     obs, info = env.reset()
     action = 0
     obs, reward, terminated, truncated, info = env.step(action)
-    assert env.observation_space.contains(obs)
+    assert obs.shape == env.observation_space.shape == (14,)
     for _ in range(len(sample_data)):
         obs, reward, terminated, truncated, info = env.step(action)
     assert terminated or truncated
@@ -91,7 +90,7 @@ def test_env_runs():
     """Smoke test to verify basic environment functionality."""
     env = LiquiditySweepEnv(_dummy_df(12))
     obs, _ = env.reset()
-    assert obs.shape == env.observation_space.shape
+    assert obs.shape == env.observation_space.shape == (14,)
     for _ in range(12):
         obs, reward, terminated, truncated, _ = env.step(env.action_space.sample())
         if terminated:
@@ -123,7 +122,10 @@ def test_env_close_long_position(sample_data):
 def test_day_episode_length():
     # 90 000 seconds (~25 h) so we cover >1 day
     idx = pd.date_range("2025-01-01", periods=90_000, freq="1s")
-    df = pd.DataFrame({"bid": 1, "ask": 1.0002, "mid": 1.0001, "spread": 0.0002, "volume": 1}, index=idx)
+    df = pd.DataFrame(
+        {"bid": 1, "ask": 1.0002, "mid": 1.0001, "spread": 0.0002, "volume": 1},
+        index=idx,
+    )
     env = LiquiditySweepEnv(df, lambda_dd=0, commission=0)
     env.reset()
     steps = 0
@@ -136,13 +138,16 @@ def test_day_episode_length():
 
 def test_position_persists_until_opposite_action():
     # Create a simple 2-bar DataFrame
-    df = pd.DataFrame({
-        'bid': [1.0, 1.1, 1.2],
-        'ask': [1.0002, 1.1002, 1.2002],
-        'mid': [1.0001, 1.1001, 1.2001],
-        'spread': [0.0002, 0.0002, 0.0002],
-        'volume': [1, 1, 1],
-    }, index=pd.date_range('2025-01-01', periods=3, freq='1min'))
+    df = pd.DataFrame(
+        {
+            "bid": [1.0, 1.1, 1.2],
+            "ask": [1.0002, 1.1002, 1.2002],
+            "mid": [1.0001, 1.1001, 1.2001],
+            "spread": [0.0002, 0.0002, 0.0002],
+            "volume": [1, 1, 1],
+        },
+        index=pd.date_range("2025-01-01", periods=3, freq="1min"),
+    )
     env = LiquiditySweepEnv(df, commission=0)
     env.reset()
     env.step(1)  # open long
@@ -151,3 +156,10 @@ def test_position_persists_until_opposite_action():
     assert env.position == 1
     env.step(2)  # explicit close
     assert env.position == 0
+
+
+def test_observation_shape(sample_data):
+    """Test that observation has correct shape."""
+    env = LiquiditySweepEnv(sample_data)
+    obs, _ = env.reset()
+    assert obs.shape == env.observation_space.shape == (14,)

@@ -44,13 +44,14 @@ def _dummy_df():
     return pd.DataFrame(
         {
             # time index is optional for this test
-            "bid":  [0.9999, 1.0004, 1.0004],
-            "ask":  [1.0001, 1.0006, 1.0006],
-            "mid":  [1.0000, 1.0005, 1.0005],
+            "bid": [0.9999, 1.0004, 1.0004],
+            "ask": [1.0001, 1.0006, 1.0006],
+            "mid": [1.0000, 1.0005, 1.0005],
             "spread": [0.0002, 0.0002, 0.0002],
             "volume": [1, 1, 1],
         }
     )
+
 
 def test_short_trading_logic():
     df = _dummy_df()

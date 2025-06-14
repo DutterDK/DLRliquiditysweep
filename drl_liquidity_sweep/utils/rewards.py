@@ -3,6 +3,7 @@
 from __future__ import annotations
 import pandas as pd
 from typing import Union, List
+import numpy as np
 
 
 def zero_reward(*args, **kwargs) -> float:  # placeholder
@@ -32,15 +33,19 @@ def calc_realized_pnl(entry: float, exit_: float, direction: int) -> float:
     return (exit_ - entry) * direction
 
 
-def drawdown_penalty(equity, lam=1.0):
-    """Calculate drawdown penalty for a series of equity values."""
-    if len(equity) < 2:
-        return 0.0
-    max_equity = equity[0]
-    penalty = 0.0
-    for eq in equity[1:]:
-        if eq > max_equity:
-            max_equity = eq
-        else:
-            penalty += lam * (max_equity - eq)
-    return -penalty
+def drawdown_penalty(equity_series, lam: float = 0.001):
+    """Calculate drawdown penalty.
+
+    Args:
+        equity_series: Series of equity values
+        lam: Penalty coefficient
+
+    Returns:
+        float: Drawdown penalty
+    """
+    if not isinstance(equity_series, pd.Series):
+        equity_series = pd.Series(equity_series)
+    peak = equity_series.cummax()
+    dd   = (peak - equity_series) / peak.replace(0, np.nan)
+    inc  = dd.diff().fillna(0).clip(lower=0)
+    return -lam * inc.iloc[-1]

@@ -31,5 +31,5 @@ def test_drawdown_penalty():
     # Step 2: Close long position at 1.0000 (bid) -> loss = -0.0002
     obs, reward, done, truncated, info = env.step(2)
     assert env.position == 0
-    # Expected reward = realized P/L (-0.0002) - commission (0.0001) + drawdown penalty (-0.3003)
-    assert reward == pytest.approx(-0.3503, abs=1e-4)
+    # Expected reward = realized P/L (-0.0002) - commission (0.0001) + drawdown penalty (-0.00005)
+    assert reward == pytest.approx(-0.00035, abs=1e-6)

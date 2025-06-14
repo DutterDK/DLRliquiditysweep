@@ -32,5 +32,5 @@ def test_bar_size_resample(tmp_path):
     df_1s = load_tick_csv(csv, to_seconds=1)
     df_5s = load_tick_csv(csv, to_seconds=5)
 
-    assert len(df_1s) == 3         # 3 seconds → 3 bars
-    assert len(df_5s) == 1         # 5-second resample collapses to 1 bar
+    assert len(df_1s) == 3  # 3 seconds → 3 bars
+    assert len(df_5s) == 1  # 5-second resample collapses to 1 bar
