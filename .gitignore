@@ -52,4 +52,10 @@ data/eurusd_1s/EURUSD_ALL.parquet
 # Model files
 models/*
 !models/vecnorm.pkl
-*.zip 
+!models/ppo_1000000.zip
+!models/ppo_1000000.zip.equity.pt
+*.zip
+
+# Logs
+logs/*
+!logs/exp_kz_round/PPO_1/events.out.tfevents.1749920579.Threadripper.26268.0 
