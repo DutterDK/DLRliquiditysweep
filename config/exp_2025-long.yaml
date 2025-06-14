@@ -11,7 +11,7 @@ env:
   reset_on_day_change: true
 
 ppo:
-  total_timesteps:  5_000_000
+  total_timesteps:  1_000_000
   n_steps:          2048          # bigger batch → stabler gradients
   batch_size:       2048
   learning_rate:    1.0e-4
@@ -22,5 +22,5 @@ ppo:
 
 misc:
   seed:     42
-  log_dir:  ./logs/exp_2025_long
+  log_dir:  logs/exp_kz_round
   save_every_steps: 250_000       # checkpoints 

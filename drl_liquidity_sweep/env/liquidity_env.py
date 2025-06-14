@@ -180,6 +180,10 @@ class LiquiditySweepEnv(gym.Env):
         else:
             hour_sin = hour_cos = 0.0
 
+        # killzone logic (inserted right after hour_sin/hour_cos)
+        hour = ts.hour + ts.minute/60
+        killzone = 1.0 if (1 <= hour < 3) or (13 <= hour < 16) else 0.0
+
         # rolling 30-min high/low
         start = max(0, self.current_step - 1800)
         roll_hi = self.data["mid"].iloc[start:self.current_step+1].max()
@@ -187,14 +191,12 @@ class LiquiditySweepEnv(gym.Env):
         dist_hi = roll_hi - mid
         dist_lo = mid - roll_lo
 
-        # new features
-        round_dist = ((mid * 10_000) % 50) / 10_000      # distance to nearest 5-pip
-        hour = ts.hour + ts.minute/60
-        killzone = 1.0 if 13 <= hour <= 16 or 1 <= hour <= 3 else 0.0
+        round_dist = ((mid * 10_000) % 50) / 10_000      # 0-to-0.005 (distance to nearest 5-pip)
 
         obs = [
             mid, spread, volume,
             hour_sin, hour_cos,
+            killzone,
             self.position,
             self.equity,
             self.entry_price,
@@ -202,10 +204,9 @@ class LiquiditySweepEnv(gym.Env):
             min(self.equity_history, default=0.0),
             np.mean(self.equity_history) if self.equity_history else 0.0,
             np.std(self.equity_history)  if self.equity_history else 0.0,
-            dist_hi, dist_lo,
-            round_dist, killzone,
-            killzone  # append killzone again for 17th feature
+            dist_hi, dist_lo
         ]
+        obs.extend([round_dist, killzone])
         return np.array(obs, dtype=np.float32)
 
     def render(self):
