@@ -50,5 +50,6 @@ data/eurusd_1s/EURUSD_ALL.parquet
 *.csv
 
 # Model files
-models/
+models/*
+!models/vecnorm.pkl
 *.zip 
