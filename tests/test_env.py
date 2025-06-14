@@ -27,7 +27,7 @@ def test_env_init(sample_data):
     env = LiquiditySweepEnv(sample_data)
     assert env.action_space.n == 3
     obs, _ = env.reset()
-    assert obs.shape == env.observation_space.shape == (14,)
+    assert obs.shape == env.observation_space.shape == (17,)
     assert env.current_step == 0
     assert env.position == 0
     assert env.entry_price == 0.0
@@ -39,7 +39,7 @@ def test_env_reset(sample_data):
     env.current_step = 5  # Move forward
     obs, info = env.reset()
     assert env.current_step == 0
-    assert obs.shape == env.observation_space.shape == (14,)
+    assert obs.shape == env.observation_space.shape == (17,)
     assert env.position == 0
     assert env.entry_price == 0.0
 
@@ -50,7 +50,7 @@ def test_env_step(sample_data):
     obs, info = env.reset()
     action = 0
     obs, reward, terminated, truncated, info = env.step(action)
-    assert obs.shape == env.observation_space.shape == (14,)
+    assert obs.shape == env.observation_space.shape == (17,)
     for _ in range(len(sample_data)):
         obs, reward, terminated, truncated, info = env.step(action)
     assert terminated or truncated
@@ -90,7 +90,7 @@ def test_env_runs():
     """Smoke test to verify basic environment functionality."""
     env = LiquiditySweepEnv(_dummy_df(12))
     obs, _ = env.reset()
-    assert obs.shape == env.observation_space.shape == (14,)
+    assert obs.shape == env.observation_space.shape == (17,)
     for _ in range(12):
         obs, reward, terminated, truncated, _ = env.step(env.action_space.sample())
         if terminated:
@@ -162,4 +162,4 @@ def test_observation_shape(sample_data):
     """Test that observation has correct shape."""
     env = LiquiditySweepEnv(sample_data)
     obs, _ = env.reset()
-    assert obs.shape == env.observation_space.shape == (14,)
+    assert obs.shape == env.observation_space.shape == (17,)

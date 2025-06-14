@@ -26,7 +26,7 @@ def test_drawdown_penalty():
     obs, reward, done, truncated, info = env.step(1)
     assert env.position == 1
     assert env.entry_price == 1.0002
-    assert reward == 0.0  # No reward yet as we just entered the position
+    assert reward == -5e-5  # Time penalty for holding position
 
     # Step 2: Close long position at 1.0000 (bid) -> loss = -0.0002
     obs, reward, done, truncated, info = env.step(2)

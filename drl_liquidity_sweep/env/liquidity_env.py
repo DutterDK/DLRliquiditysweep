@@ -181,8 +181,11 @@ class LiquiditySweepEnv(gym.Env):
             hour_sin = hour_cos = 0.0
 
         # killzone logic (inserted right after hour_sin/hour_cos)
-        hour = ts.hour + ts.minute/60
-        killzone = 1.0 if (1 <= hour < 3) or (13 <= hour < 16) else 0.0
+        if isinstance(ts, pd.Timestamp):
+            hour = ts.hour + ts.minute/60
+            killzone = 1.0 if (1 <= hour < 3) or (13 <= hour < 16) else 0.0
+        else:
+            killzone = 0.0  # Default to no killzone for non-timestamp data
 
         # rolling 30-min high/low
         start = max(0, self.current_step - 1800)

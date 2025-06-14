@@ -20,4 +20,4 @@ def test_day_episode_length():
     assert 80_000 < steps < 90_000  # one full trading day
 
     obs, _ = env.reset()
-    assert obs.shape == env.observation_space.shape == (14,)
+    assert obs.shape == env.observation_space.shape == (17,)

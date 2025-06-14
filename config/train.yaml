@@ -3,14 +3,14 @@ data:
   bar_size: 1  # 1 second bars
 
 env:
-  commission: 0.0  # Set to 0 for testing
-  lambda_dd: 0.0  # Set to 0 for testing
+  commission: 0.0  # keep off for now
+  lambda_dd: 0.0002
   max_position: 1
   max_drawdown: 0.1
   reward_scale: 1.0
   reset_on_day_change: true
   data_file: data/eurusd_1s/EURUSD_ALL.parquet
-  bar_seconds: 1
+  bar_seconds: 5
   train_start: "2024-05-01"
   train_end:   "2025-01-31"
   test_start:  "2025-02-01"
@@ -36,7 +36,10 @@ train:
   gamma: 0.99
   gae_lambda: 0.95
   clip_range: 0.2
-  total_timesteps: 50000  # Reduced for testing
+  total_timesteps: 1_000_000  # quick cycle
   model_dir: "./models"
   model_name: "ppo_liquidity_sweep"
-  tensorboard_log: "./logs" 
+  tensorboard_log: "./logs"
+
+misc:
+  log_dir: logs/exp_kz_round 

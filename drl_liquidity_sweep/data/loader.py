@@ -20,7 +20,7 @@ def _resample_polars(df: pl.DataFrame, to_seconds: int) -> pd.DataFrame:
     ])
 
     out = (
-        df.groupby_dynamic("time", every=every, closed="left")
+        df.group_by_dynamic(index_column="time", every=every, closed="left")
           .agg([
               pl.col("bid").last().alias("bid"),
               pl.col("ask").last().alias("ask"),

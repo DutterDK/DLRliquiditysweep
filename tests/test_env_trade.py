@@ -27,12 +27,13 @@ def test_long_trading_logic():
     obs, reward, done, truncated, info = env.step(1)  # Long at 1.0001
     assert env.position == 1
     assert env.entry_price == 1.0001
-    assert reward == 0.0  # No reward yet as we just entered the position
+    assert reward == -5e-5  # Time penalty for holding position
 
     # Step 2: Hold position
     obs, reward, done, truncated, info = env.step(0)  # Hold
     assert env.position == 1  # Still long
-    assert reward == pytest.approx(0.0003)  # Unrealized P/L: 1.0004 - 1.0001 = 0.0003
+    expected = (1.0004 - 1.0001) - 5e-5  # Unrealized P/L minus time penalty
+    assert reward == pytest.approx(expected, abs=1e-8)
 
     # Step 3: Close position
     obs, reward, done, truncated, info = env.step(2)  # Close long
@@ -62,7 +63,7 @@ def test_short_trading_logic():
     env.step(2)
 
     # Expected unrealised P/L on hold
-    exp_hold = env.entry_price - df.loc[1, "ask"]
+    exp_hold = env.entry_price - df.loc[1, "ask"] - 5e-5  # Include time penalty
 
     # Step 2: hold
     _, r_hold, _, _, _ = env.step(0)

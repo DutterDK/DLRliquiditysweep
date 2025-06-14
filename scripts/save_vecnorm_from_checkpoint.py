@@ -15,6 +15,6 @@ def make_env():
 venv = DummyVecEnv([make_env])
 venv = VecNormalize(venv, training=False, norm_obs=True, norm_reward=False)
 
-model = PPO.load("models/ppo_5000000.zip", env=venv)  # loads stats into venv
+model = PPO.load("models/ppo_2000000.zip", env=venv)  # loads stats into venv
 venv.save("models/vecnorm.pkl")                       # overwrite old file
 print("✔ vecnorm.pkl written, shape", venv.obs_rms.mean.shape) 
